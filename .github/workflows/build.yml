@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build APK
 
 on:
   push:
@@ -8,30 +8,30 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Download Godot 4.3
+      - name: Setup Godot 4.3
         run: |
-          GODOT_VERSION="4.3"
-          wget -q "https://downloads.tuxfamily.org/godotengine/${GODOT_VERSION}/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -O godot.zip
+          GODOT_VERSION="4.3-stable"
+          GODOT_ZIP="Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          wget -q "https://downloads.tuxfamily.org/godotengine/4.3/${GODOT_ZIP}" -O godot.zip
           unzip -q godot.zip
-          mv Godot_v${GODOT_VERSION}-stable_linux.x86_64 godot
-          chmod +x godot
+          chmod +x Godot_v${GODOT_VERSION}_linux.x86_64
+          sudo mv Godot_v${GODOT_VERSION}_linux.x86_64 /usr/local/bin/godot
+          godot --version
 
-      - name: Download Android Build Tools
+      - name: Setup Export Templates
         run: |
-          wget -q "https://downloads.tuxfamily.org/godotengine/4.3/Godot_v4.3-stable_export_templates.tpz" -O templates.tpz
+          TEMPLATES_FILE="Godot_v4.3-stable_export_templates.tpz"
+          wget -q "https://downloads.tuxfamily.org/godotengine/4.3/${TEMPLATES_FILE}" -O templates.tpz
           unzip -q templates.tpz
           mkdir -p ~/.local/share/godot/export_templates/4.3.stable/
           mv templates/android/* ~/.local/share/godot/export_templates/4.3.stable/
 
-      - name: Setup keystore
-        run: |
-          echo -e "y\nAPKRelease\napkapkap\napkapkap\n1\nIndonesia\nJawa Tengah\nSemarang\nTycoon\nBerlian\nAPK\napkapkap" | keytool -genkey -v -keystore release.keystore -alias APKRelease -keyalg RSA -keysize 2048 -validity 10000 -storepass apkapkap -keypass apkapkap -dname "CN=APK, OU=Dev, O=Tycoon, L=Semarang, ST=Jawa Tengah, C=ID" -deststoretype pkcs12
-
-      - name: Buat file pengaturan ekspor
+      - name: Create Export Config
         run: |
           cat > export_presets.cfg << 'EOF'
           [preset.0]
@@ -41,26 +41,22 @@ jobs:
           debug=false
           release=true
           export_path="build/BilliardTycoon.apk"
-          encrypt_index=false
-          options/keystore/release="release.keystore"
-          options/keystore/release_password="apkapkap"
-          options/keystore/alias="APKRelease"
-          options/keystore/alias_password="apkapkap"
           options/package_name="com.berlian.billiardtycoon"
           options/version_code=1
           options/version_name="1.0"
           options/min_sdk=21
-          options/target_sdk=33
+          options/use_keystore=false
           EOF
 
       - name: Build APK
         run: |
           mkdir -p build
-          ./godot --headless --export-release "Android" build/BilliardTycoon.apk
+          godot --headless --export-release "Android" build/BilliardTycoon.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: BilliardTycoon-APK
+          name: BilliardTycoon_APK
           path: build/BilliardTycoon.apk
+          retention-days: 30
           
