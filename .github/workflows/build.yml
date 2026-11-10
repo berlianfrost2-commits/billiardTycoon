@@ -1,0 +1,30 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Godot
+        uses: godotengine/godot-action@v4
+        with:
+          godot-version: "4.3-stable"
+          godot-platform: linux
+
+      - name: Build APK
+        run: |
+          godot --headless --export-release "Android" build/BilliardTycoon.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: BilliardTycoon-APK
+          path: build/BilliardTycoon.apk
+          
